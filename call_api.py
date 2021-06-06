@@ -9,9 +9,11 @@ from textwrap import wrap
 requests.packages.urllib3.disable_warnings()    # due to API have no cert so we won"t verify SSL certificate and this is to disable warning msg
 requests.adapters.DEFAULT_RETRIES = 3
 
+
 APIs = {
     "covid_today": "https://covid19.ddc.moph.go.th/api/open/today"
     , "covid_sum": "https://covid19.ddc.moph.go.th/api/open/cases/sum"
+    , "covid_trend": "https://covid19.ddc.moph.go.th/api/open/timeline"
 }
 
 def api_caller(endpoint):
@@ -35,7 +37,7 @@ def gen_today_data(data_type):
 """
 today_resp_json = api_caller("covid_today")
 
-today_data = ["Confirmed", "Recovered", "Hospitalized", "Deaths"]
+today_data = ["Confirmed", "Hospitalized", "Recovered", "Deaths"]
 for d in today_data:
     print(gen_today_data(d))
 print("Updated date: " + str(today_resp_json["UpdateDate"]))
@@ -44,8 +46,8 @@ print("Updated date: " + str(today_resp_json["UpdateDate"]))
 ### get sum data ### # Province, Nation, Gender
 def gen_covid_cases(sum_by, case_index, case_value, plot_title, top):
     sum_resp_json[sum_by].sort(key = lambda x:x["Count"], reverse=True) # sort DESC
-    col = []
-    val = []
+    column = []
+    value = []
     for each_gender in sum_resp_json[sum_by][:top]:
         if each_gender[case_index] == "หญิง":
             each_gender[case_index] = "Women"
@@ -53,29 +55,40 @@ def gen_covid_cases(sum_by, case_index, case_value, plot_title, top):
             each_gender[case_index] = "Men"
         elif each_gender[case_index] == "ไทย":
             each_gender[case_index] = "Thailand"
-        col.append(each_gender[case_index])
-        val.append(each_gender[case_value])
-    plot_covid_case(col, val, plot_title)
-
-def plot_covid_case(case_index, case_value, plot_title):
-    case_index = [ '\n'.join(wrap(l, 7)) for l in case_index]
-    plotG.bar(case_index, case_value)
+        column.append(each_gender[case_index])
+        value.append(each_gender[case_value])
+    #plot bar graph
+    if sum_by == "Gender":
+        plot_gender = plotG.figure(1)
+    elif sum_by == "Nation":
+        plot_nation = plotG.figure(2)
+    elif sum_by == "Province":
+        plot_province = plotG.figure(3)
+    column = [ '\n'.join(wrap(l, 7)) for l in column]
+    plotG.bar(column, value)
     """for index, value in enumerate(case_value):
         plotG.text(value, index,
                 str(value))"""
-    for i in range(len(case_index)):
-        plotG.text(i,case_value[i],case_value[i], ha = 'center')
+    for i in range(len(column)):
+        plotG.text(i,value[i],value[i], ha = 'center')
     plotG.title(plot_title)
-    plotG.show()
 
 sum_resp_json = api_caller("covid_sum")
-print(sum_resp_json["Gender"])
-#gen_covid_cases("Gender", "Gender", "Count", "Today's COVID cases by gender",3)
-#gen_covid_cases("Nation", "Nation", "Count", "Today's COVID cases by Nation",10)
-#gen_covid_cases("Province", "ProvinceEn", "Count", "Today's COVID cases by Thailand province",20)
+#print(sum_resp_json["Gender"])
+gen_covid_cases("Gender", "Gender", "Count", "Today's COVID cases by gender", 3)
+gen_covid_cases("Nation", "Nation", "Count", "Today's COVID cases by Nation", 10)
+gen_covid_cases("Province", "ProvinceEn", "Count", "Today's COVID cases by Thailand province", 20)
 
+plotG.show()
 
-
+"""
+    "Date": "01/03/2021",
+    "Confirmed": 7694,
+    "Hospitalized": 3278,
+    "Recovered": 4352,
+    "Deaths": 64
+"""
+### get trend data ###
 """
 dataf_sum_gender = DataFrame(sum_gender,columns=['Women','Men','Unknown'])
 print(dataf_sum_gender)
