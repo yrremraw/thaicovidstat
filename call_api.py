@@ -1,7 +1,8 @@
 import requests
 import json
 from datetime import datetime, timedelta, date
-from pandas import DataFrame
+#from pandas import DataFrame
+import pandas
 import matplotlib.pyplot as plotG
 import numpy as np
 from textwrap import wrap
@@ -10,6 +11,7 @@ requests.packages.urllib3.disable_warnings()    # due to API have no cert so we 
 requests.adapters.DEFAULT_RETRIES = 3
 
 
+today_date = date.today()
 APIs = {
     "covid_today": "https://covid19.ddc.moph.go.th/api/open/today"
     , "covid_sum": "https://covid19.ddc.moph.go.th/api/open/cases/sum"
@@ -64,7 +66,7 @@ def gen_covid_cases(sum_by, case_index, case_value, plot_title, top):
         plot_nation = plotG.figure(2)
     elif sum_by == "Province":
         plot_province = plotG.figure(3)
-    column = [ '\n'.join(wrap(l, 7)) for l in column]
+    column = [ '\n'.join(wrap(l, 7)) for l in column]       ######### plt.xticks(rotation = 45) #####
     plotG.bar(column, value)
     """for index, value in enumerate(case_value):
         plotG.text(value, index,
@@ -75,12 +77,17 @@ def gen_covid_cases(sum_by, case_index, case_value, plot_title, top):
 
 sum_resp_json = api_caller("covid_sum")
 #print(sum_resp_json["Gender"])
+"""
 gen_covid_cases("Gender", "Gender", "Count", "Today's COVID cases by gender", 3)
 gen_covid_cases("Nation", "Nation", "Count", "Today's COVID cases by Nation", 10)
 gen_covid_cases("Province", "ProvinceEn", "Count", "Today's COVID cases by Thailand province", 20)
 
 plotG.show()
+"""
 
+
+
+#######################
 """
     "Date": "01/03/2021",
     "Confirmed": 7694,
@@ -98,15 +105,59 @@ plotG.show()
 bar(x, height[, width, bottom, align, data])
 """
 
-""" # TREND
+
+
+last_90_days_since = (today_date - timedelta(days=90))
+#print(last_90_days_since)
+
+trend_resp_json = api_caller("covid_trend")
+print("Update date: " + trend_resp_json["UpdateDate"])
+
+trend_resp_json["Data"].sort(key = lambda x:datetime.strptime(x["Date"], '%m/%d/%Y').date(), reverse=True) # sort date DESC
+#print(trend_resp_json["Data"])
+"""Date = []
+Confirmed = []
+Hospitalized = []
+Recovered = []
+Deaths = []"""
+trend_data = {
+    "Date": []
+    , "Confirmed": []
+    , "Hospitalized": []
+    , "Recovered": []
+    , "Deaths": []
+    }
+for each_day in trend_resp_json["Data"]:
+    if datetime.strptime(each_day["Date"], '%m/%d/%Y').date() >= last_90_days_since:
+        trend_data["Date"].append(each_day["Date"])
+        trend_data["Confirmed"].append(each_day["Confirmed"])
+        trend_data["Hospitalized"].append(each_day["Hospitalized"])
+        trend_data["Recovered"].append(each_day["Recovered"])
+        trend_data["Deaths"].append(each_day["Deaths"])
+#print(Date)
+#print(trend_data)
+#dataF = DataFrame(trend_data,columns=["Confirmed", "Hospitalized", "Recovered", "Deaths"])
+df2 = pandas.DataFrame(trend_data, columns=["Confirmed", "Hospitalized", "Recovered", "Deaths"])
+ax = df2.plot(lw=4, colormap="jet", marker=".", markersize=10, title="Trend of COVID case in Thailand (last 90 days)")
+#dataF.plot(kind="line", title=)
+ax.set_xlabel("Date (last X days)")
+ax.set_ylabel("Case count")
+#plotG.plot(Date ,Confirmed ,Hospitalized ,Recovered ,Deaths)
+plotG.show()
+
+
+"""
 Data = {'April': [111,531,58,421,256,90,147,500,40,150], 'May': [150,40,500,147,90,256,421,58,531,111] }
 dataF = DataFrame(Data,columns=['April','May'])
 plotG.plot(dataF)
-plotG.show()
+#plotG.show()
 """
-
-
-
+"""
+    #plot_trend = plotG.figure(4)
+print(Confirmed)
+print(Hospitalized)
+print(Recovered)
+print(Deaths)"""
 """print("## response: " + str(response))
 print("## response content: " + str(response.content))
 print("## response json: " + str(today_resp_json))
